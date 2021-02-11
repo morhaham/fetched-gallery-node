@@ -11,14 +11,20 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 
 (async function main() {
-  const data = {
-    folder: process.argv[3],
-    images: [],
-  };
-
   try {
     const browser = await puppeteer.launch();
     const [page] = await browser.pages();
+
+    const userImgsDir = `./${process.argv[3]}`;
+
+    if (!fs.existsSync(userImgsDir)) {
+      fs.mkdirSync(userImgsDir);
+    }
+
+    const data = {
+      dir: userImgsDir,
+      images: [],
+    };
 
     const allImgResponses = {};
     page.on("response", (response) => {
@@ -47,23 +53,23 @@ const fs = require("fs");
     let i = 0;
     for (const img of selecedImgs) {
       fs.writeFileSync(
-        `./${process.argv[3]}/${i++}.${img.src.slice(-3)}`,
+        `./${userImgsDir}/${i++}.${img.src.slice(-3)}`,
         await allImgResponses[img.src].buffer()
       );
     }
 
+    fs.readdirSync(`./${process.argv[3]}`).forEach((imgLocalSrc, i) => {
+      data.images[i].imgLocalSrc = imgLocalSrc;
+    });
+
+    routes(app, data);
+    const port = process.env.PORT || 3000;
+
+    app.listen(port, () => {
+      console.log(`server run on port ${port}`);
+    });
     await browser.close();
   } catch (err) {
     console.error(err);
   }
-
-  fs.readdirSync(`./${process.argv[3]}`).forEach((imgLocalSrc, i) => {
-    data.images[i].imgLocalSrc = imgLocalSrc;
-  });
-
-  routes(app, data);
-  const port = process.env.PORT || 3000;
-  app.listen(port, () => {
-    console.log(`server run on port ${port}`);
-  });
 })();
